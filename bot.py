@@ -10,6 +10,8 @@ from telegram.ext import (
 )
 import asyncpg
 import os
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+PORT = int(os.getenv("PORT", 10000))
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 TOKEN = os.getenv("BOT_TOKEN")
@@ -877,7 +879,12 @@ def main():
 
     print("🚗 Avtoservis bot ishga tushdi...")
 
-    app.run_polling()
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        url_path=TOKEN,
+        webhook_url=f"{WEBHOOK_URL}/{TOKEN}"
+    )
 
 
 if __name__ == "__main__":
