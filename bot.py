@@ -1,3 +1,4 @@
+import asyncio
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import (
     Application,
@@ -7,9 +8,10 @@ from telegram.ext import (
     filters,
     ConversationHandler,
 )
-
+import asyncpg
 import os
 
+DATABASE_URL = os.getenv("DATABASE_URL")
 TOKEN = os.getenv("BOT_TOKEN")
 
 # Biznes lokatsiyasi
@@ -26,6 +28,8 @@ CAR, SERVICE, PHONE, DATE, CAR_OTHER, SERVICE_OTHER, PART_CAR, PART_YEAR, PART_N
 # =========================
 # START
 # =========================
+
+
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
@@ -316,6 +320,25 @@ async def get_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     order_id = f"PANDA-{ORDER_NUMBER:04d}"
 
+    conn = await asyncpg.connect(DATABASE_URL)
+
+    await conn.execute("""
+        INSERT INTO orders
+        (order_number, user_id, username, full_name, phone, car, service, date)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    """,
+        order_id,
+        user_id,
+        username,
+        full_name,
+        phone,
+        car,
+        service,
+        date
+    )
+
+    await conn.close()
+
     # Klientga
     main_keyboard = [
     [KeyboardButton("🔧 Xizmatlar"), KeyboardButton("💰 Narxlar")],
@@ -518,6 +541,26 @@ async def get_part_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     full_name = user.full_name
     user_id = user.id
 
+    conn = await asyncpg.connect(DATABASE_URL)
+
+    await conn.execute("""
+        INSERT INTO parts_orders
+        (user_id, username, full_name, phone, car, year, part_name, vin, photo_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    """,
+        user_id,
+        username,
+        full_name,
+        phone,
+        car,
+        year,
+        part_name,
+        vin,
+        photo_id
+    )
+
+    await conn.close()
+
     # Klientga
     main_keyboard = [
     [KeyboardButton("🔧 Xizmatlar"), KeyboardButton("💰 Narxlar")],
@@ -602,7 +645,45 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # MAIN
 # =========================
 
+async def init_db():
+    conn = await asyncpg.connect(DATABASE_URL)
+
+    await conn.execute("""
+        CREATE TABLE IF NOT EXISTS orders (
+            id SERIAL PRIMARY KEY,
+            order_number TEXT,
+            user_id BIGINT,
+            username TEXT,
+            full_name TEXT,
+            phone TEXT,
+            car TEXT,
+            service TEXT,
+            date TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    await conn.execute("""
+        CREATE TABLE IF NOT EXISTS parts_orders (
+            id SERIAL PRIMARY KEY,
+            user_id BIGINT,
+            username TEXT,
+            full_name TEXT,
+            phone TEXT,
+            car TEXT,
+            year TEXT,
+            part_name TEXT,
+            vin TEXT,
+            photo_id TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    await conn.close()
+
 def main():
+    asyncio.run(init_db())
+
     app = Application.builder().token(TOKEN).build()
 
     # Start
