@@ -1,4 +1,7 @@
 import asyncio
+from email.mime import application
+import json
+from telegram.ext import MessageHandler, filters
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import (
     Application,
@@ -21,6 +24,7 @@ LATITUDE = 41.270528
 LONGITUDE = 69.171306
 
 ADMIN_ID = 5522204543
+
 ORDER_NUMBER = 0
 
 # Ustaga yozilish bosqichlari
@@ -56,6 +60,51 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # =========================
 # XIZMATLAR
 # =========================
+
+async def web_app_order(update, context):
+    data = update.effective_message.web_app_data.data
+
+    try:
+        order = json.loads(data)
+
+        brand = order.get("brand", "")
+        model = order.get("model", "")
+        products = order.get("products", [])
+
+        product_text = ""
+
+        for i, product in enumerate(products, start=1):
+            product_text += (
+                f"{i}. {product.get('name')}\n"
+                f"💰 {product.get('price')}\n\n"
+            )
+
+        user = update.effective_user
+
+        text = (
+            "🔔 YANGI BUYURTMA\n\n"
+            f"👤 Mijoz: {user.full_name}\n"
+            f"🆔 Telegram ID: {user.id}\n"
+            f"🚗 Mashina: {brand} {model}\n\n"
+            "🛒 TANLANGAN ZAPCHASTLAR:\n\n"
+            f"{product_text}"
+        )
+
+        await context.bot.send_message(
+            chat_id=ADMIN_ID,
+            text=text
+        )
+
+        await update.message.reply_text(
+            "✅ Buyurtmangiz qabul qilindi!"
+        )
+
+    except Exception as e:
+        print("WEB APP ORDER ERROR:", e)
+
+        await update.message.reply_text(
+            "❌ Buyurtmani yuborishda xatolik yuz berdi."
+        )
 
 async def services(update: Update):
     await update.message.reply_text(
@@ -868,6 +917,13 @@ def main():
     )
 
     app.add_handler(booking)
+
+    app.add_handler(
+        MessageHandler(
+            filters.StatusUpdate.WEB_APP_DATA,
+            web_app_order
+        )
+    )
 
     # Oddiy menyu
     app.add_handler(
