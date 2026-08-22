@@ -2,7 +2,7 @@ import asyncio
 from email.mime import application
 import json
 from telegram.ext import MessageHandler, filters
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton,  WebAppInfo
 from telegram.ext import (
     Application,
     CommandHandler,
