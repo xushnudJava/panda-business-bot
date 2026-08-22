@@ -1034,8 +1034,7 @@ def main():
     listen="0.0.0.0",
     port=PORT,
     url_path=TOKEN,
-    webhook_url=f"{WEBHOOK_URL}/{TOKEN}",
-    health_check_path="/health"
+    webhook_url=f"{WEBHOOK_URL}/{TOKEN}"
     )
 
 
