@@ -62,9 +62,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # =========================
 
 async def web_app_order(update, context):
-    data = update.effective_message.web_app_data.data
+    print("🔥 WEB APP DATA KELDI")
 
     try:
+        data = update.effective_message.web_app_data.data
+        print("📦 DATA:", data)
+
         order = json.loads(data)
 
         brand = order.get("brand", "")
@@ -90,21 +93,21 @@ async def web_app_order(update, context):
             f"{product_text}"
         )
 
+        print("📤 ADMINGA YUBORILMOQDA...")
+
         await context.bot.send_message(
             chat_id=ADMIN_ID,
             text=text
         )
+
+        print("✅ ADMININGA YUBORILDI")
 
         await update.message.reply_text(
             "✅ Buyurtmangiz qabul qilindi!"
         )
 
     except Exception as e:
-        print("WEB APP ORDER ERROR:", e)
-
-        await update.message.reply_text(
-            "❌ Buyurtmani yuborishda xatolik yuz berdi."
-        )
+        print("❌ WEB APP ORDER ERROR:", repr(e))
 
 async def services(update: Update):
     await update.message.reply_text(
