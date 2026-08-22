@@ -63,7 +63,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=reply_markup
     )
 
-
+async def health(request):
+    return web.Response(text="Bot is running")
 # =========================
 # XIZMATLAR
 # =========================
@@ -1027,6 +1028,8 @@ def main():
     )
 
     print("🚗 Avtoservis bot ishga tushdi...")
+
+    app.web_app.router.add_get("/health", health)
 
     app.run_webhook(
         listen="0.0.0.0",
