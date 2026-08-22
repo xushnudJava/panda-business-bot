@@ -39,12 +39,12 @@ CAR, SERVICE, PHONE, DATE, CAR_OTHER, SERVICE_OTHER, PART_CAR, PART_YEAR, PART_N
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
-        KeyboardButton(
+        [KeyboardButton(
             "🛒 Zapchastlar",
             web_app=WebAppInfo(
                 url="https://auto-service-bice.vercel.app"
             )
-        )
+        )],
         [KeyboardButton("🔧 Xizmatlar"), KeyboardButton("💰 Narxlar")],
         [KeyboardButton("📍 Manzil"), KeyboardButton("🕐 Ish vaqti")],
         [KeyboardButton("📅 Ustaga yozilish"), KeyboardButton("🧩 Zapchast so‘rash")],
