@@ -2,7 +2,7 @@ import asyncio
 from email.mime import application
 import json
 from telegram.ext import MessageHandler, filters
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton,  WebAppInfo
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton,  WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -10,6 +10,7 @@ from telegram.ext import (
     ContextTypes,
     filters,
     ConversationHandler,
+    CallbackQueryHandler
 )
 import asyncpg
 import os
@@ -72,13 +73,14 @@ async def web_app_order(update, context):
 
     try:
         data = update.effective_message.web_app_data.data
-        print("📦 DATA:", data)
-
         order = json.loads(data)
 
         brand = order.get("brand", "")
         model = order.get("model", "")
         products = order.get("products", [])
+
+        # Buyurtma raqami
+        order_id = f"ORDER-{update.effective_message.message_id}"
 
         product_text = ""
 
@@ -90,30 +92,108 @@ async def web_app_order(update, context):
 
         user = update.effective_user
 
-        text = (
-            "🔔 YANGI BUYURTMA\n\n"
+        # Admin uchun tugmalar
+        keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton(
+                    "✅ Qabul qilish",
+                    callback_data=f"accept_{order_id}_{user.id}"
+                ),
+                InlineKeyboardButton(
+                    "❌ Bekor qilish",
+                    callback_data=f"cancel_{order_id}_{user.id}"
+                )
+            ]
+        ])
+
+        # ADMIN XABARI
+        admin_text = (
+            f"🔔 YANGI BUYURTMA #{order_id}\n\n"
             f"👤 Mijoz: {user.full_name}\n"
             f"🆔 Telegram ID: {user.id}\n"
-            f"🚗 Mashina: {brand} {model}\n\n"
-            "🛒 TANLANGAN ZAPCHASTLAR:\n\n"
+            f"🚗 Avtomobil: {brand} {model}\n\n"
+            f"🛒 TANLANGAN ZAPCHASTLAR:\n\n"
             f"{product_text}"
+            f"📊 Holat: ⏳ Kutilmoqda"
         )
-
-        print("📤 ADMINGA YUBORILMOQDA...")
 
         await context.bot.send_message(
             chat_id=ADMIN_ID,
-            text=text
+            text=admin_text,
+            reply_markup=keyboard
         )
 
-        print("✅ ADMININGA YUBORILDI")
-
-        await update.message.reply_text(
-            "✅ Buyurtmangiz qabul qilindi!"
+        # MIJOZ XABARI
+        customer_text = (
+            f"🎉 BUYURTMANGIZ QABUL QILINDI!\n\n"
+            f"📦 Buyurtma raqami: #{order_id}\n"
+            f"🚗 Avtomobil: {brand} {model}\n\n"
+            f"🛒 SIZ TANLAGAN ZAPCHASTLAR:\n\n"
+            f"{product_text}"
+            f"⏳ Hozircha buyurtmangiz ko'rib chiqilmoqda.\n\n"
+            f"Operator tez orada siz bilan bog'lanadi."
         )
+
+        await update.message.reply_text(customer_text)
+
+        print("✅ BUYURTMA MUVAFFAQIYATLI YUBORILDI")
 
     except Exception as e:
         print("❌ WEB APP ORDER ERROR:", repr(e))
+
+
+async def order_callback(update, context):
+    query = update.callback_query
+
+    await query.answer()
+
+    data = query.data
+
+    parts = data.split("_")
+
+    action = parts[0]
+    order_id = parts[1]
+    user_id = int(parts[2])
+
+    if action == "accept":
+
+        await query.edit_message_reply_markup(
+            reply_markup=None
+        )
+
+        await query.edit_message_text(
+            query.message.text + "\n\n"
+            "🟢 HOLAT: QABUL QILINDI"
+        )
+
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=(
+                f"🎉 Buyurtmangiz qabul qilindi!\n\n"
+                f"📦 Buyurtma: #{order_id}\n\n"
+                f"Tez orada operator siz bilan bog'lanadi."
+            )
+        )
+
+    elif action == "cancel":
+
+        await query.edit_message_reply_markup(
+            reply_markup=None
+        )
+
+        await query.edit_message_text(
+            query.message.text + "\n\n"
+            "🔴 HOLAT: BEKOR QILINDI"
+        )
+
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=(
+                f"❌ Buyurtmangiz bekor qilindi.\n\n"
+                f"📦 Buyurtma: #{order_id}\n\n"
+                f"Qo'shimcha ma'lumot uchun operator bilan bog'laning."
+            )
+        )
 
 async def services(update: Update):
     await update.message.reply_text(
@@ -932,6 +1012,10 @@ def main():
             filters.StatusUpdate.WEB_APP_DATA,
             web_app_order
         )
+    )
+
+    app.add_handler(
+        CallbackQueryHandler(order_callback)
     )
 
     # Oddiy menyu
